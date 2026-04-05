@@ -79,7 +79,7 @@ void benchmark(const std::string& name, int N,
 }
 
 int main() {
-    for (int N : {512, 1024, 2048}) {
+    for (int N : {512, 1024}) {
         Matrix A(N), B(N), C(N), C2(N), C3(N), C4(N), C5(N);;
 
         for (int i = 0; i < N; i++)
