@@ -1,5 +1,7 @@
 #include <vector>
 #include <iostream>
+#include <chrono>
+#include <functional>
 
 struct Matrix {
     // two member variables: N and data
@@ -41,9 +43,26 @@ void matmul_reordered(Matrix& A, Matrix& B, Matrix& C) {
                 C.at(i,j) += A.at(i,k) * B.at(k,j);
 }
 
+void matmul_inlined(Matrix& A, Matrix& B, Matrix& C) {
+    int N = A.N;
+    for (int i = 0; i < N; i++)
+        for (int k = 0; k < N; k++)
+            for (int j = 0; j < N; j++)
+                C.data[i*N+j] += A.data[i*N+k] * B.data[k*N+j];
+}
+
+void benchmark(const std::string& name, int N, 
+               std::function<void()> fn) {
+    auto start = std::chrono::high_resolution_clock::now();
+    fn();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> diff = end - start;
+    std::cout << "N=" << N << " " << name << ": " << diff.count() << " ms\n";
+}
+
 int main() {
     for (int N : {256, 512}) {
-        Matrix A(N), B(N), C(N), C2(N);
+        Matrix A(N), B(N), C(N), C2(N), C3(N);
 
         for (int i = 0; i < N; i++)
             for (int j = 0; j < N; j++) {
@@ -51,17 +70,9 @@ int main() {
                 B.at(i,j) = 1.0;
             }
 
-        auto start = std::chrono::high_resolution_clock::now();
-        matmul_naive(A, B, C);
-        auto end = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> diff = end - start;
-        std::cout << "N=" << N << " naive:     " << diff.count() << " ms\n";
-
-        auto start2 = std::chrono::high_resolution_clock::now();
-        matmul_reordered(A, B, C2);
-        auto end2 = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double, std::milli> diff2 = end2 - start2;
-        std::cout << "N=" << N << " reordered: " << diff2.count() << " ms\n\n";
+        benchmark("naive",     N, [&]{ matmul_naive(A, B, C); });
+        benchmark("reordered", N, [&]{ matmul_reordered(A, B, C2); });
+        benchmark("inlined",   N, [&]{ matmul_inlined(A, B, C3); });
     }
     return 0;
 }
